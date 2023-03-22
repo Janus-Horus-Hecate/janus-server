@@ -1,0 +1,1 @@
+{"command":{"Prove":{"data":"./data/MobileNetV2/input.json","model":"./data/MobileNetV2/network.onnx","vk_path":"MobileNetV2.vk","proof_path":"MobileNetV2.pf","params_path":"kzg.params","transcript":"EVM","strategy":"Single"}},"args":{"tolerance":0,"scale":4,"bits":10,"logrows":12,"public_inputs":false,"public_outputs":true,"public_params":false,"max_rotations":512}}
