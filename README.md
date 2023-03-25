@@ -1,6 +1,6 @@
 # Janus: Blockchain FaceID
 
-Janus is a powerful and secure blockchain FaceID plugin, leveraging the power of zero-knowledge machine learning through the [ezkl](https://github.com/zkonduit/ezkl/tree/main/src) library. Designed as a submission for the Scaling ETH hackathon, Janus provides an innovative solution for user authentication using a combination of their crypto wallet and a selfie.
+Janus is a powerful and secure blockchain FaceID plugin, leveraging the power of zero-knowledge machine learning through the [ezkl](https://github.com/zkonduit/ezkl) library. Designed as a submission for the Scaling ETH hackathon, Janus provides an innovative solution for user authentication using a combination of their crypto wallet and a selfie.
 
 ### Features
 - Zero-Knowledge Machine Learning: Janus utilizes the ezkl library to perform machine learning operations, such as model forwarding and mock proving, while preserving user privacy.
