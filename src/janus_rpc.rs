@@ -22,6 +22,8 @@ use std::collections::HashMap;
 use std::{env, error::Error, fs::File, sync::Arc};
 use std::{io::prelude::*, path::PathBuf};
 
+use jsonrpsee::tracing::Value;
+
 pub struct JanusRpc {
     auth_log: HashMap<String, Vec<u64>>,
 }
@@ -33,9 +35,15 @@ trait JanusApi {
     #[method(name = "mock")]
     async fn mock(&self, input_data: Value, target_output_data: Value) -> Result<bool>;
     #[method(name = "submit_proof")]
-    async fn submit_proof(&self, input_data: Value, target_output_data: Value, user_address: String) -> Result<bool>;
+    async fn submit_proof(
+        &self,
+        input_data: Value,
+        target_output_data: Value,
+        user_address: String,
+    ) -> Result<bool>;
     #[method(name = "verify_aggr_proof")]
-    async fn verify_aggr_proof(&self, input_data: Value, target_output_data: Value) -> Result<bool>;
+    async fn verify_aggr_proof(&self, input_data: Value, target_output_data: Value)
+        -> Result<bool>;
     #[method(name = "verify_solidity")]
     async fn verify_solidity(&self) -> Result<bool>;
 }
@@ -119,7 +127,7 @@ impl JanusRpc {
                 info!("mock success");
                 if distance < 0.1 {
                     self.submit_proof(input_data, target_output_data, hunt_id)
-                        .await?;
+                        .await;
                     Ok(true)
                 } else {
                     Ok(false)
@@ -129,7 +137,12 @@ impl JanusRpc {
         }
     }
 
-    async fn submit_proof(&self, input_data: Value, target_output_data: Value, hunt_id: String) -> (Result<bool>, String) {
+    async fn submit_proof(
+        &self,
+        input_data: Value,
+        target_output_data: Value,
+        hunt_id: String,
+    ) -> (Result<bool>, String) {
         let cli = Cli {
             command: Commands::Prove {
                 data: "./data/MobileNetV2/input.json".to_string(),
@@ -208,83 +221,91 @@ impl JanusRpc {
     }
 
     // TODO: finish verify with Solidity contract (ethers.rs)
-    async fn verify_solidity(&self) -> Result<bool> {
-
-    }
-
-    fn store_json_data(json_str: &str, path: &str) -> std::io::Result<()> {
-        // Open the file for writing
-        let mut file = File::create(path)?;
-    
-        // Write the Json data to the file
-        file.write_all(json_str.as_bytes())?;
-    
-        Ok(())
-    }
-    
-    fn retrieve_json_data(path: &str) -> std::io::Result<Value> {
-        // Open the file for reading
-        let mut file = File::open(path)?;
-    
-        // Read the file contents into a string
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-    
-        // Parse the JSON string into a JSON object
-        let json_data: Value = serde_json::from_str(&contents)?;
-    
-        Ok(json_data)
-    }
-    
-    // Finding the Euclidian distance between the two output tensors of our machine learning model
-    fn euclidean_distance(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
-        // check to make sure that a and b are the same length since the tensors should be the same
-        assert_eq!(
-            a.len(),
-            b.len(),
-            "The lengths of a and b are {} and {}. They should be the same length.",
-            a.len(),
-            b.len()
-        );
-    
-        a.iter()
-            .zip(b)
-            .map(|(&x, &y)| (x - y).powi(2))
-            .sum::<f64>()
-            .sqrt()
-    }
-
-    //TODO: add trigger payment functionality
-    
-    fn triggerPayment() -> bool {
-            // define params for Ethers rust call
-            // We pass in the huntID, the address of the winner, and the proof here.
-            // let params = VerifyAwardParams::new();
-            // let result = hunter_caller::main(params).unwrap();
-            // println!("contract logs: {:?}", result);
-        true
-    }
-    
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-    
-        #[test]
-        fn test_euclidean_distance() {
-            let a: &Vec<f64> = &vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
-            let b: &Vec<f64> = &vec![10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
-            assert_eq!(euclidean_distance(&a, &b), 18.16590212458495);
+    async fn verify_solidity(&self, user_address: String, photo_preimage: Value) -> Result<bool> {
+        // send data and generate proof
+        let cli: Cli {
+            command: Commands::Prove {
+                data: "./data/MobileNetV2/input.json".to_string(),
+                model: PathBuf::from("./data/MobileNetV2/network.onnx"),
+                vk_path: PathBuf::from("MobileNetV2.vk"),
+                proof_path: PathBuf::from("MobileNetV2.pf"),
+                params_path: PathBuf::from("kzg.params"),
+                transcript: TranscriptType::EVM,
+                strategy: StrategyType::Single,
+            },
+            args: SERVER_ARGS,
+        };
         }
-    
-        #[test]
-        #[should_panic(
-            expected = "The lengths of a and b are 10 and 9. They should be the same length."
-        )]
-        fn test_euclidean_distance_different_lengths() {
-            let a: &Vec<f64> = &vec![1.0, 2.0, 3.8, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 110.8];
-            let b: &Vec<f64> = &vec![10.0, 9.0, 84.0, 7.0, 6.4, 51.0, 4.0, 3.8, 2.0];
-            euclidean_distance(&a, &b);
         }
+        // send proof to verifier contract with verify_caller.rs
+        // calculate euclidian distance and return true if < 0.1
+        // is this address in the auth log? if so, compare to target. If not, set target to address
+        if self.auth_log.contains_key(user_address) {
             
+        }
+    }
+}
+
+fn store_json_data(json_str: &str, path: &str) -> std::io::Result<()> {
+    // Open the file for writing
+    let mut file = File::create(path)?;
+
+    // Write the Json data to the file
+    file.write_all(json_str.as_bytes())?;
+
+    Ok(())
+}
+
+fn retrieve_json_data(path: &str) -> std::io::Result<Value> {
+    // Open the file for reading
+    let mut file = File::open(path)?;
+
+    // Read the file contents into a string
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    // Parse the JSON string into a JSON object
+    let json_data: Value = serde_json::from_str(&contents)?;
+
+    Ok(json_data)
+}
+
+// Finding the Euclidian distance between the two output tensors of our machine learning model
+fn euclidean_distance(a: &Vec<f64>, b: &Vec<f64>) -> f64 {
+    // check to make sure that a and b are the same length since the tensors should be the same
+    assert_eq!(
+        a.len(),
+        b.len(),
+        "The lengths of a and b are {} and {}. They should be the same length.",
+        a.len(),
+        b.len()
+    );
+
+    a.iter()
+        .zip(b)
+        .map(|(&x, &y)| (x - y).powi(2))
+        .sum::<f64>()
+        .sqrt()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_euclidean_distance() {
+        let a: &Vec<f64> = &vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        let b: &Vec<f64> = &vec![10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
+        assert_eq!(euclidean_distance(&a, &b), 18.16590212458495);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "The lengths of a and b are 10 and 9. They should be the same length."
+    )]
+    fn test_euclidean_distance_different_lengths() {
+        let a: &Vec<f64> = &vec![1.0, 2.0, 3.8, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 110.8];
+        let b: &Vec<f64> = &vec![10.0, 9.0, 84.0, 7.0, 6.4, 51.0, 4.0, 3.8, 2.0];
+        euclidean_distance(&a, &b);
     }
 }
